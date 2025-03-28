@@ -55,18 +55,32 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
     "typescript": "^5.3.3"
-  }
+  },
   "expo": {
-  "doctor": {
-    "reactNativeDirectoryCheck": {
-      "exclude": [
-        "lucide-react-native",
-        "@lucide/lab", 
-        "pdf-lib",
-        "@expo/config-plugins"
-      ],
-      "listUnknownPackages": false
+    "name": "FichajeXpert",
+    "slug": "fichajexpert",
+    "android": {
+      "package": "com.tuempresa.fichajexpert",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "lucide-react-native",
+          "@lucide/lab",
+          "pdf-lib",
+          "@expo/config-plugins"
+        ],
+        "listUnknownPackages": false
+      }
     }
   }
-}
 }
