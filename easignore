@@ -4,3 +4,4 @@ Temp/
 TokenBroker/
 *.tmp
 *.tbres
+AppData/Local/ElevatedDiagnostics/
