@@ -1,0 +1,6 @@
+AppData/
+Local/
+Temp/
+TokenBroker/
+*.tmp
+*.tbres
