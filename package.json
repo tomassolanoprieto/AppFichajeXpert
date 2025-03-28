@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "EXPO_NO_TELEMETRY=1 expo start --web",
     "build:web": "expo export --platform web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "verify-assets": "node ./scripts/verifyAssets.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
@@ -54,7 +55,8 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "expo-asset": "~8.9.0"
   },
   "expo": {
     "name": "FichajeXpert",
@@ -63,13 +65,15 @@
       "package": "com.tuempresa.fichajexpert",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFFFFF",
+        "verifyImagePath": true
       }
     },
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "verifyImagePath": true
     },
     "doctor": {
       "reactNativeDirectoryCheck": {
@@ -79,8 +83,14 @@
           "pdf-lib",
           "@expo/config-plugins"
         ],
-        "listUnknownPackages": false
+        "listUnknownPackages": false,
+        "silenceWarnings": true,
+        "disable": false
       }
+    },
+    "assetVerification": {
+      "strict": true,
+      "silenceErrors": false
     }
   }
 }
