@@ -20,12 +20,22 @@ export default function Profile() {
     work_centers: string[];
     job_positions: string[];
     seniority_date: string;
-    work_schedule: { [key: string]: { start_time: string, end_time: string } | null };
+    work_schedule: { 
+      [key: string]: { 
+        morning_shift?: { start_time: string, end_time: string },
+        afternoon_shift?: { start_time: string, end_time: string }
+      } | null 
+    };
     notification_minutes: number;
   } | null>(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [workSchedule, setWorkSchedule] = useState<{ [key: string]: { start_time: string, end_time: string } | null }>({});
+  const [workSchedule, setWorkSchedule] = useState<{ 
+    [key: string]: { 
+      morning_shift?: { start_time: string, end_time: string },
+      afternoon_shift?: { start_time: string, end_time: string }
+    } | null 
+  }>({});
   const [notificationMinutes, setNotificationMinutes] = useState<number>(0);
 
   useEffect(() => {
@@ -158,14 +168,22 @@ export default function Profile() {
     }
   };
 
-  const handleWorkScheduleChange = (day: string, field: 'start_time' | 'end_time', value: string) => {
-    setWorkSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value
-      }
-    }));
+  const handleWorkScheduleChange = (day: string, shift: 'morning_shift' | 'afternoon_shift', field: 'start_time' | 'end_time', value: string) => {
+    setWorkSchedule(prev => {
+      const daySchedule = prev[day] || {};
+      const shiftSchedule = daySchedule?.[shift] || { start_time: '', end_time: '' };
+      
+      return {
+        ...prev,
+        [day]: {
+          ...daySchedule,
+          [shift]: {
+            ...shiftSchedule,
+            [field]: value
+          }
+        }
+      };
+    });
   };
 
   const handleNotificationMinutesChange = (value: string) => {
@@ -293,34 +311,64 @@ export default function Profile() {
         )}
         <View style={styles.card}>
           {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => (
-            <View key={day} style={styles.field}>
-              <Text style={styles.label}>{day}</Text>
-              <View style={styles.timeContainer}>
-                <View style={styles.timeField}>
-                  <Text style={styles.timeLabel}>Hora entrada</Text>
-                  <TimePicker
-                    value={workSchedule[day]?.start_time || ''}
-                    onChange={(value) => handleWorkScheduleChange(day, 'start_time', value)}
-                    placeholder="Seleccionar hora"
-                  />
-                </View>
-                <View style={styles.timeField}>
-                  <Text style={styles.timeLabel}>Hora salida</Text>
-                  <TimePicker
-                    value={workSchedule[day]?.end_time || ''}
-                    onChange={(value) => handleWorkScheduleChange(day, 'end_time', value)}
-                    placeholder="Seleccionar hora"
-                  />
+            <View key={day} style={styles.dayContainer}>
+              <Text style={styles.dayTitle}>{day}</Text>
+              
+              {/* Turno Día */}
+              <View style={styles.shiftContainer}>
+                <Text style={styles.shiftTitle}>Turno Día</Text>
+                <View style={styles.timeContainer}>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeLabel}>Hora entrada</Text>
+                    <TimePicker
+                      value={workSchedule[day]?.morning_shift?.start_time || ''}
+                      onChange={(value) => handleWorkScheduleChange(day, 'morning_shift', 'start_time', value)}
+                      placeholder="Seleccionar hora"
+                    />
+                  </View>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeLabel}>Hora salida</Text>
+                    <TimePicker
+                      value={workSchedule[day]?.morning_shift?.end_time || ''}
+                      onChange={(value) => handleWorkScheduleChange(day, 'morning_shift', 'end_time', value)}
+                      placeholder="Seleccionar hora"
+                    />
+                  </View>
                 </View>
               </View>
+
+              {/* Turno Tarde */}
+              <View style={[styles.shiftContainer, styles.afternoonShift]}>
+                <Text style={styles.shiftTitle}>Turno Tarde</Text>
+                <View style={styles.timeContainer}>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeLabel}>Hora entrada</Text>
+                    <TimePicker
+                      value={workSchedule[day]?.afternoon_shift?.start_time || ''}
+                      onChange={(value) => handleWorkScheduleChange(day, 'afternoon_shift', 'start_time', value)}
+                      placeholder="Seleccionar hora"
+                    />
+                  </View>
+                  <View style={styles.timeField}>
+                    <Text style={styles.timeLabel}>Hora salida</Text>
+                    <TimePicker
+                      value={workSchedule[day]?.afternoon_shift?.end_time || ''}
+                      onChange={(value) => handleWorkScheduleChange(day, 'afternoon_shift', 'end_time', value)}
+                      placeholder="Seleccionar hora"
+                    />
+                  </View>
+                </View>
+              </View>
+
               <TouchableOpacity
                 style={[styles.button, styles.buttonDanger]}
                 onPress={() => setWorkSchedule(prev => ({ ...prev, [day]: null }))}
               >
-                <Text style={styles.buttonText}>No Trabaja</Text>
+                <Text style={styles.buttonText}>No Trabaja este día</Text>
               </TouchableOpacity>
             </View>
           ))}
+
           <View style={styles.field}>
             <Text style={styles.label}>Notificación App (minutos)</Text>
             <TextInput
@@ -386,6 +434,35 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  dayContainer: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  dayTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  shiftContainer: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  afternoonShift: {
+    backgroundColor: '#fff7ed',
+  },
+  shiftTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0369a1',
+    marginBottom: 8,
+    fontFamily: 'Inter_500Medium',
+  },
   field: {
     marginBottom: 12,
   },
@@ -420,6 +497,7 @@ const styles = StyleSheet.create({
   },
   buttonDanger: {
     backgroundColor: '#dc2626',
+    marginTop: 8,
   },
   buttonDisabled: {
     backgroundColor: '#9ca3af',
@@ -464,7 +542,6 @@ const styles = StyleSheet.create({
   timeContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 12,
   },
   timeField: {
     flex: 1,
