@@ -44,7 +44,8 @@ export async function scheduleWorkNotification(
   day: number, // 0-6 for Sunday-Saturday
   time: string, // HH:mm format
   delayMinutes: number,
-  type: 'entry' | 'exit' // New parameter to differentiate between entry and exit notifications
+  type: 'entry' | 'exit', // New parameter to differentiate between entry and exit notifications
+  shift: 'morning' | 'afternoon' // New parameter to differentiate between shifts
 ) {
   if (Platform.OS === 'web') {
     return null;
@@ -75,14 +76,14 @@ export async function scheduleWorkNotification(
   // Get supervisors for the work center
   const supervisors = await getSupervisorsByWorkCenter(workCenter);
 
-  // Schedule notification for employee with different messages based on type
+  // Schedule notification for employee with different messages based on type and shift
   const employeeNotificationId = await Notifications.scheduleNotificationAsync({
     content: {
-      title: type === 'entry' ? '¡Recordatorio de entrada!' : '¡Recordatorio de salida!',
+      title: `¡Recordatorio de ${type === 'entry' ? 'entrada' : 'salida'} - Turno de ${shift === 'morning' ? 'mañana' : 'tarde'}!`,
       body: type === 'entry' 
-        ? 'No has registrado tu entrada todavía. Por favor, registra tu fichaje.'
-        : 'No has registrado tu salida todavía. Por favor, registra tu fichaje.',
-      data: { type: 'work_reminder', employeeId, reminderType: type },
+        ? `No has registrado tu entrada del turno de ${shift === 'morning' ? 'mañana' : 'tarde'}. Por favor, registra tu fichaje.`
+        : `No has registrado tu salida del turno de ${shift === 'morning' ? 'mañana' : 'tarde'}. Por favor, registra tu fichaje.`,
+      data: { type: 'work_reminder', employeeId, reminderType: type, shift },
     },
     trigger: {
       date: targetDate,
@@ -90,21 +91,22 @@ export async function scheduleWorkNotification(
     },
   });
 
-  // Schedule notifications for supervisors with different messages based on type
+  // Schedule notifications for supervisors with different messages based on type and shift
   const supervisorNotifications = await Promise.all(
     supervisors.map(supervisor =>
       Notifications.scheduleNotificationAsync({
         content: {
-          title: type === 'entry' ? 'Alerta de entrada' : 'Alerta de salida',
+          title: `Alerta de ${type === 'entry' ? 'entrada' : 'salida'} - Turno de ${shift === 'morning' ? 'mañana' : 'tarde'}`,
           body: type === 'entry'
-            ? `El empleado ${employeeName} no ha registrado su entrada en ${workCenter}`
-            : `El empleado ${employeeName} no ha registrado su salida en ${workCenter}`,
+            ? `El empleado ${employeeName} no ha registrado su entrada del turno de ${shift === 'morning' ? 'mañana' : 'tarde'} en ${workCenter}`
+            : `El empleado ${employeeName} no ha registrado su salida del turno de ${shift === 'morning' ? 'mañana' : 'tarde'} en ${workCenter}`,
           data: { 
             type: 'supervisor_reminder', 
             employeeId,
             workCenter,
             supervisorId: supervisor.id,
-            reminderType: type
+            reminderType: type,
+            shift
           },
         },
         trigger: {
@@ -133,7 +135,12 @@ export async function setupWorkScheduleNotifications(
   employeeId: string,
   employeeName: string,
   workCenters: string[],
-  workSchedule: { [key: string]: { start_time: string, end_time: string } | null },
+  workSchedule: { 
+    [key: string]: { 
+      morning_shift?: { start_time: string, end_time: string },
+      afternoon_shift?: { start_time: string, end_time: string }
+    } | null 
+  },
   notificationMinutes: number
 ) {
   if (Platform.OS === 'web') {
@@ -163,40 +170,83 @@ export async function setupWorkScheduleNotifications(
   // Schedule notifications for each working day and work center
   const notifications = [];
   for (const [day, schedule] of Object.entries(workSchedule)) {
-    if (schedule?.start_time && schedule?.end_time) {
+    if (schedule) {
       const dayNumber = dayMapping[day];
       
       // Schedule notifications for each work center
       for (const workCenter of workCenters) {
-        // Schedule entry notification
-        const entryNotificationIds = await scheduleWorkNotification(
-          employeeId,
-          employeeName,
-          workCenter,
-          dayNumber,
-          schedule.start_time,
-          notificationMinutes,
-          'entry'
-        );
-
-        // Schedule exit notification
-        const exitNotificationIds = await scheduleWorkNotification(
-          employeeId,
-          employeeName,
-          workCenter,
-          dayNumber,
-          schedule.end_time,
-          notificationMinutes,
-          'exit'
-        );
-
-        if (entryNotificationIds || exitNotificationIds) {
-          notifications.push({ 
-            day, 
+        // Morning shift notifications
+        if (schedule.morning_shift?.start_time && schedule.morning_shift?.end_time) {
+          // Morning shift entry notification
+          const morningEntryNotificationIds = await scheduleWorkNotification(
+            employeeId,
+            employeeName,
             workCenter,
-            entry: entryNotificationIds,
-            exit: exitNotificationIds
-          });
+            dayNumber,
+            schedule.morning_shift.start_time,
+            notificationMinutes,
+            'entry',
+            'morning'
+          );
+
+          // Morning shift exit notification
+          const morningExitNotificationIds = await scheduleWorkNotification(
+            employeeId,
+            employeeName,
+            workCenter,
+            dayNumber,
+            schedule.morning_shift.end_time,
+            notificationMinutes,
+            'exit',
+            'morning'
+          );
+
+          if (morningEntryNotificationIds || morningExitNotificationIds) {
+            notifications.push({
+              day,
+              workCenter,
+              shift: 'morning',
+              entry: morningEntryNotificationIds,
+              exit: morningExitNotificationIds
+            });
+          }
+        }
+
+        // Afternoon shift notifications
+        if (schedule.afternoon_shift?.start_time && schedule.afternoon_shift?.end_time) {
+          // Afternoon shift entry notification
+          const afternoonEntryNotificationIds = await scheduleWorkNotification(
+            employeeId,
+            employeeName,
+            workCenter,
+            dayNumber,
+            schedule.afternoon_shift.start_time,
+            notificationMinutes,
+            'entry',
+            'afternoon'
+          );
+
+          // Afternoon shift exit notification
+          const afternoonExitNotificationIds = await scheduleWorkNotification(
+            employeeId,
+            employeeName,
+            workCenter,
+            dayNumber,
+            schedule.afternoon_shift.end_time,
+            notificationMinutes,
+            'exit',
+            'afternoon'
+          );
+
+          if (afternoonEntryNotificationIds || afternoonExitNotificationIds) {
+            notifications.push({
+              day,
+              workCenter,
+              shift: 'afternoon',
+              entry: afternoonEntryNotificationIds,
+              exit: afternoonExitNotificationIds
+            });
+          }
         }
       }
     }
