@@ -2,7 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, ImageBackground } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import * as SecureStore from 'expo-secure-store';
-import { Shield, Users, Clock, Search, X, Building2 } from 'lucide-react-native';
+import { Shield, Users, Clock, Search, X, Building2, MapPin } from 'lucide-react-native';
+
+const getApproximateLocation = async (latitude, longitude) => {
+  try {
+    const response = await fetch(
+      `https://us1.locationiq.com/v1/reverse.php?key=pk.e07ef17ed17dc6d6359dbbdcaa8d4124&lat=${latitude}&lon=${longitude}&format=json`
+    );
+    const data = await response.json();
+    return data.display_name || "Ubicación no disponible";
+  } catch (error) {
+    console.error("Error con LocationIQ:", error);
+    return "Error al obtener ubicación";
+  }
+};
 
 export default function SupervisorDashboard() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -14,6 +27,7 @@ export default function SupervisorDashboard() {
   const [selectedEmployeeEntries, setSelectedEmployeeEntries] = useState<any[]>([]);
   const [supervisorWorkCenters, setSupervisorWorkCenters] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [locations, setLocations] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const getSupervisorInfo = async () => {
@@ -66,6 +80,21 @@ export default function SupervisorDashboard() {
 
     getSupervisorInfo();
   }, []);
+
+  const loadLocations = async (entries: any[]) => {
+    const locs: Record<string, string> = {};
+    
+    for (const entry of entries) {
+      if (entry.latitude && entry.longitude) {
+        const location = await getApproximateLocation(entry.latitude, entry.longitude);
+        locs[entry.id] = location;
+      } else {
+        locs[entry.id] = 'No disponible';
+      }
+    }
+    
+    setLocations(locs);
+  };
 
   const calculateTotalWorkTime = (entries: any[]) => {
     if (!entries?.length) return 0;
@@ -152,6 +181,9 @@ export default function SupervisorDashboard() {
       });
       setSelectedEmployeeEntries(employeeEntries);
       setShowDetailsModal(true);
+      
+      // Cargar las ubicaciones cuando se selecciona un empleado
+      loadLocations(employeeEntries);
     } catch (err) {
       console.error('Error selecting employee:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar los datos del empleado');
@@ -297,21 +329,35 @@ export default function SupervisorDashboard() {
 
                   <Text style={styles.sectionTitle}>Registro de Entradas</Text>
                   {selectedEmployeeEntries.length > 0 ? (
-                    selectedEmployeeEntries.map((entry, index) => (
-                      <View key={entry.id} style={styles.entryCard}>
-                        <Text style={styles.entryType}>
-                          {getEntryTypeText(entry.entry_type)}
-                        </Text>
-                        <Text style={styles.entryTime}>
-                          {new Date(entry.timestamp).toLocaleString()}
-                        </Text>
-                        {entry.work_center && (
-                          <Text style={styles.entryWorkCenter}>
-                            Centro: {entry.work_center}
-                          </Text>
-                        )}
+                    <View style={styles.entriesTable}>
+                      <View style={styles.tableHeader}>
+                        <Text style={styles.headerText}>Tipo</Text>
+                        <Text style={styles.headerText}>Fecha/Hora</Text>
+                        <Text style={styles.headerText}>Centro</Text>
+                        <Text style={styles.headerText}>Ubicación</Text>
                       </View>
-                    ))
+                      {selectedEmployeeEntries
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                        .map((entry) => (
+                          <View key={entry.id} style={styles.tableRow}>
+                            <Text style={styles.entryType}>
+                              {getEntryTypeText(entry.entry_type)}
+                            </Text>
+                            <Text style={styles.entryTime}>
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </Text>
+                            <Text style={styles.entryWorkCenter}>
+                              {entry.work_center || '-'}
+                            </Text>
+                            <View style={styles.locationCell}>
+                              <MapPin size={16} color="#6b7280" />
+                              <Text style={styles.entryLocation}>
+                                {locations[entry.id] || 'Cargando...'}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                    </View>
                   ) : (
                     <Text style={styles.noEntriesText}>
                       No hay registros para mostrar
@@ -549,30 +595,69 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontFamily: 'Inter_700Bold',
   },
-  entryCard: {
-    backgroundColor: '#f9fafb',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+  entriesTable: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    alignItems: 'center',
   },
   entryType: {
-    fontSize: 16,
+    flex: 1,
+    fontSize: 14,
     color: '#111827',
-    marginBottom: 4,
-    fontFamily: 'Inter_600SemiBold',
+    textAlign: 'center',
+    fontFamily: 'Inter_500Medium',
   },
   entryTime: {
+    flex: 1,
     fontSize: 14,
     color: '#6b7280',
-    marginBottom: 4,
+    textAlign: 'center',
     fontFamily: 'Inter_400Regular',
   },
   entryWorkCenter: {
+    flex: 1,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    fontFamily: 'Inter_400Regular',
+  },
+  locationCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  entryLocation: {
     fontSize: 14,
     color: '#6b7280',
     fontFamily: 'Inter_400Regular',
+    flexShrink: 1,
   },
   noEntriesText: {
     textAlign: 'center',
