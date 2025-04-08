@@ -17,9 +17,15 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": true",
       "bundleIdentifier": "com.yourcompany.fichajexpert",
-      "buildNumber": "1.0.0"
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "FichajeXpert utiliza la cámara para escanear códigos QR y verificar los fichajes de empleados.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "La aplicación necesita acceso a la ubicación para registrar los fichajes.",
+        "NSLocationWhenInUseUsageDescription": "La aplicación necesita acceso a la ubicación para registrar los fichajes.",
+        "NSLocationAlwaysUsageDescription": "La aplicación necesita acceso a la ubicación para registrar los fichajes en segundo plano."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +34,12 @@
         "verifyImagePath": true
       },
       "package": "com.yourcompany.fichajexpert",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
