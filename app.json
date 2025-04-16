@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true",
-      "bundleIdentifier": "com.yourcompany.fichajexpert",
+      "bundleIdentifier": "com.tomassolano.fichajexpert",
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSCameraUsageDescription": "FichajeXpert utiliza la cámara para escanear códigos QR y verificar los fichajes de empleados.",
